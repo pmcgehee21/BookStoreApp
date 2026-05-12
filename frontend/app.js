@@ -10,8 +10,12 @@ function showSection(id) {
 
 // --- Books ---
 
-async function loadBooks(query = "") {
-  const url = query ? `${API}/books/?q=${encodeURIComponent(query)}` : `${API}/books/`;
+async function loadBooks(query = "", type = "all") {
+  let url = `${API}/books/`;
+  if (query) {
+    url += `?q=${encodeURIComponent(query)}&type=${type}`;
+  }
+  
   const res = await fetch(url);
   const books = await res.json();
   const list = document.getElementById("book-list");
@@ -28,7 +32,9 @@ async function loadBooks(query = "") {
 
 function searchBooks() {
   const q = document.getElementById("search-input").value;
-  loadBooks(q);
+  const type = document.getElementById("search-type").value;
+
+  loadBooks(q, type);
 }
 
 // --- Cart ---
