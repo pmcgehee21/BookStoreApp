@@ -1,11 +1,31 @@
 const API = "http://127.0.0.1:5000";
 let token = localStorage.getItem("token") || null;
+let userRole = localStorage.getItem("role") || null;
 
 function showSection(id) {
   document.querySelectorAll(".section").forEach(s => s.classList.add("hidden"));
   document.getElementById(id).classList.remove("hidden");
   if (id === "browse") loadBooks();
   if (id === "cart") loadCart();
+  if (id === "inventory") loadInventory();
+  if (id === "orders") loadAllOrders();
+}
+
+function applyRoleUI() {
+  const isEmployee = userRole === "employee" || userRole === "manager";
+  document.getElementById("nav-login").classList.toggle("hidden", !!token);
+  document.getElementById("nav-logout").classList.toggle("hidden", !token);
+  document.getElementById("nav-inventory").classList.toggle("hidden", !isEmployee);
+  document.getElementById("nav-orders").classList.toggle("hidden", !isEmployee);
+}
+
+function logout() {
+  token = null;
+  userRole = null;
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  applyRoleUI();
+  showSection("browse");
 }
 
 // --- Books ---
@@ -23,27 +43,25 @@ async function loadBooks(query = "", type = "all") {
     <div class="book-card">
       <div>
         <strong>${b.title}</strong> by ${b.author}<br/>
-        $${b.price.toFixed(2)} - ${b.stock_quantity} in stock
+        $${b.price.toFixed(2)} &mdash; ${b.stock_quantity} in stock
       </div>
-
       <div>
         ${
           b.stock_quantity <= 0
-            ? `<span style="color:red;font-weight:bold;">Out of Stock</span`
+            ? `<span style="color:red;font-weight:bold;">Special Order</span>`
             : b.stock_quantity <= 2
-              ? `<span style="color:orange;"Low Stock</span>`
-              :`span style="color green;">In Stock</span>`
-      }
+              ? `<span style="color:orange;">Low Stock</span>`
+              : `<span style="color:green;">In Stock</span>`
+        }
+      </div>
+      <button
+        onclick="addToCart(${b.id})"
+        ${b.stock_quantity <= 0 ? "disabled" : ""}
+      >
+        ${b.stock_quantity <= 0 ? "Unavailable" : "Add to Cart"}
+      </button>
     </div>
-
-    <button
-      onclick="addToCart(${b.id})"
-      ${b.stock_quantity <= 0 ? "disabled" : ""}
-    >
-      $b.stock_quantity <= 0 ? "Unavailable" : "Add to Cart"}
-    </button>
-  </div>
-`).join("");
+  `).join("");
 }
 
 function searchBooks() {
@@ -123,8 +141,11 @@ async function login() {
   const data = await res.json();
   if (res.ok) {
     token = data.token;
+    userRole = data.role;
     localStorage.setItem("token", token);
-    document.getElementById("login-message").textContent = `Logged in as ${data.role}`;
+    localStorage.setItem("role", userRole);
+    applyRoleUI();
+    showSection("browse");
   } else {
     document.getElementById("login-message").textContent = data.error;
   }
@@ -134,5 +155,82 @@ function authHeaders() {
   return { Authorization: `Bearer ${token}` };
 }
 
-// Load browse on start
+// --- Employee: Inventory ---
+
+function showAddBookForm() {
+  document.getElementById("add-book-form").classList.toggle("hidden");
+}
+
+async function loadInventory() {
+  const res = await fetch(`${API}/books/`);
+  const books = await res.json();
+  document.getElementById("inventory-list").innerHTML = books.map(b => `
+    <div class="book-card">
+      <div>
+        <strong>${b.title}</strong> by ${b.author}<br/>
+        Category: ${b.category || "N/A"} &mdash; ISBN: ${b.isbn || "N/A"}<br/>
+        $${b.price.toFixed(2)} &mdash; Stock: ${b.stock_quantity}
+      </div>
+      <div>
+        <label>Update Stock:</label>
+        <input type="number" id="stock-${b.id}" value="${b.stock_quantity}" style="width:60px;" />
+        <button onclick="updateStock(${b.id})">Save</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function updateStock(bookId) {
+  const qty = parseInt(document.getElementById(`stock-${bookId}`).value);
+  await fetch(`${API}/books/${bookId}`, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ stock_quantity: qty }),
+  });
+  loadInventory();
+}
+
+async function addBook() {
+  const body = {
+    title: document.getElementById("book-title").value,
+    author_name: document.getElementById("book-author").value,
+    isbn: document.getElementById("book-isbn").value,
+    price: parseFloat(document.getElementById("book-price").value),
+    stock_quantity: parseInt(document.getElementById("book-stock").value),
+    category: document.getElementById("book-category").value,
+    description: document.getElementById("book-description").value,
+  };
+  const res = await fetch(`${API}/books/`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const msg = document.getElementById("add-book-message");
+  if (res.ok) {
+    msg.textContent = "Book added successfully.";
+    loadInventory();
+  } else {
+    const err = await res.json();
+    msg.textContent = err.error || "Failed to add book.";
+  }
+}
+
+// --- Employee: Orders ---
+
+async function loadAllOrders() {
+  const res = await fetch(`${API}/store/orders`, { headers: authHeaders() });
+  const orders = await res.json();
+  document.getElementById("orders-list").innerHTML = orders.length ? orders.map(o => `
+    <div class="book-card">
+      <strong>Order #${o.order_id}</strong> &mdash; Status: ${o.status} &mdash; Total: $${o.total.toFixed(2)}<br/>
+      <small>${o.created_at}</small>
+      <ul>
+        ${o.items.map(i => `<li>${i.title} x${i.quantity} @ $${i.price_at_purchase.toFixed(2)}</li>`).join("")}
+      </ul>
+    </div>
+  `).join("") : "<p>No orders found.</p>";
+}
+
+// Init
+applyRoleUI();
 showSection("browse");

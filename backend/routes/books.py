@@ -8,11 +8,21 @@ books_bp = Blueprint("books", __name__)
 @books_bp.route("/", methods=["GET"])
 def get_books():
     search = request.args.get("q", "").strip()
+    search_type = request.args.get("type", "all")
     query = Book.query.join(Author)
     if search:
-        query = query.filter(
-            Book.title.ilike(f"%{search}%") | Author.name.ilike(f"%{search}%")
-        )
+        if search_type == "title":
+            query = query.filter(Book.title.ilike(f"%{search}%"))
+        elif search_type == "author":
+            query = query.filter(Author.name.ilike(f"%{search}%"))
+        elif search_type == "category":
+            query = query.filter(Book.category.ilike(f"%{search}%"))
+        else:
+            query = query.filter(
+                Book.title.ilike(f"%{search}%") |
+                Author.name.ilike(f"%{search}%") |
+                Book.category.ilike(f"%{search}%")
+            )
     books = query.all()
     return jsonify([_serialize(b) for b in books]), 200
 

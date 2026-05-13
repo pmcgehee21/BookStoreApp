@@ -19,7 +19,7 @@ def register():
         name=data["name"],
         email=data["email"],
         password_hash=generate_password_hash(data["password"]),
-        role=data.get("role", "customer"),
+        role="customer",
     )
     db.session.add(user)
     db.session.commit()
