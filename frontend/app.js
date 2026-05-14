@@ -332,47 +332,120 @@ async function submitFeedback() {
   }
 }
 
-async function loadStaffFeedback() {
+let currentFeedbackFilter = "all";
+
+async function loadStaffFeedback(statusFilter) {
   if (!token) return;
-  const res = await fetch(`${API}/feedback/`, { headers: authHeaders() });
+  if (statusFilter !== undefined) currentFeedbackFilter = statusFilter;
+
+  const url = currentFeedbackFilter === "all"
+    ? `${API}/feedback/`
+    : `${API}/feedback/?status=${currentFeedbackFilter}`;
+
+  const res = await fetch(url, { headers: authHeaders() });
   if (!res.ok) return;
-  const entries = await res.json();
+  const data = await res.json();
+  const { entries, counts } = data;
 
   const listEl = document.getElementById("staff-feedback-list");
   const summaryEl = document.getElementById("feedback-summary");
 
-  if (!entries.length) {
-    summaryEl.innerHTML = "";
-    listEl.innerHTML = "<p>No feedback submitted yet.</p>";
-    return;
-  }
+  const allEntries = counts.all;
+  const avg = allEntries > 0
+    ? (entries.reduce((sum, e) => sum + e.rating, 0) / (entries.length || 1)).toFixed(1)
+    : null;
 
-  const avg = (entries.reduce((sum, e) => sum + e.rating, 0) / entries.length).toFixed(1);
+  const globalAvgRes = await fetch(`${API}/feedback/`, { headers: authHeaders() });
+  const globalData = await globalAvgRes.json();
+  const globalAvg = globalData.counts.all > 0
+    ? (globalData.entries.reduce((sum, e) => sum + e.rating, 0) / globalData.entries.length).toFixed(1)
+    : null;
+
   summaryEl.innerHTML = `
     <div class="feedback-summary-bar">
-      <span class="summary-avg">${avg} <span class="stars-inline">${"&#9733;".repeat(Math.round(avg))}${"&#9734;".repeat(5 - Math.round(avg))}</span></span>
-      <span style="color:#555;margin-left:0.8rem;">Average rating &mdash; ${entries.length} review${entries.length !== 1 ? "s" : ""}</span>
+      ${globalAvg !== null ? `
+        <span class="summary-avg">${globalAvg} <span class="stars-inline">${"&#9733;".repeat(Math.round(globalAvg))}${"&#9734;".repeat(5 - Math.round(globalAvg))}</span></span>
+        <span style="color:#555;margin-left:0.8rem;">Average rating &mdash; ${globalData.counts.all} total review${globalData.counts.all !== 1 ? "s" : ""}</span>
+      ` : `<span style="color:#888;">No feedback yet.</span>`}
+    </div>
+    <div class="feedback-filter-tabs">
+      <button class="filter-tab ${currentFeedbackFilter === "all" ? "active" : ""}" onclick="loadStaffFeedback('all')">
+        All <span class="filter-count">${counts.all}</span>
+      </button>
+      <button class="filter-tab filter-tab-new ${currentFeedbackFilter === "new" ? "active" : ""}" onclick="loadStaffFeedback('new')">
+        New <span class="filter-count">${counts.new}</span>
+      </button>
+      <button class="filter-tab filter-tab-reviewed ${currentFeedbackFilter === "reviewed" ? "active" : ""}" onclick="loadStaffFeedback('reviewed')">
+        Reviewed <span class="filter-count">${counts.reviewed}</span>
+      </button>
+      <button class="filter-tab filter-tab-actioned ${currentFeedbackFilter === "actioned" ? "active" : ""}" onclick="loadStaffFeedback('actioned')">
+        Actioned <span class="filter-count">${counts.actioned}</span>
+      </button>
     </div>
   `;
+
+  if (!entries.length) {
+    listEl.innerHTML = `<p style="color:#888;margin-top:1rem;">No feedback in this category.</p>`;
+    return;
+  }
 
   const categoryLabels = { general: "General", selection: "Book Selection", service: "Customer Service", website: "Website Experience", other: "Other" };
 
   listEl.innerHTML = entries.map(f => `
-    <div class="feedback-card">
+    <div class="feedback-card" id="fcard-${f.id}">
       <div class="feedback-card-header">
         <div>
           <strong>${escapeHtml(f.name)}</strong>
           ${f.email ? `<span style="color:#888;font-size:0.85rem;margin-left:0.5rem;">${escapeHtml(f.email)}</span>` : ""}
         </div>
-        <div style="text-align:right;">
+        <div style="text-align:right;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end;">
           <span class="feedback-stars">${"&#9733;".repeat(f.rating)}${"&#9734;".repeat(5 - f.rating)}</span>
           <span class="feedback-badge">${categoryLabels[f.category] || f.category}</span>
+          <span class="status-badge status-${f.status}">${f.status.charAt(0).toUpperCase() + f.status.slice(1)}</span>
         </div>
       </div>
       <p class="feedback-card-message">${escapeHtml(f.message)}</p>
-      <small style="color:#aaa;">${f.created_at}</small>
+      <div class="feedback-note-row">
+        <textarea class="internal-note-input" id="note-${f.id}" placeholder="Add internal note...">${escapeHtml(f.internal_note)}</textarea>
+      </div>
+      <div class="feedback-actions">
+        <small style="color:#aaa;">Received: ${f.created_at}</small>
+        <div class="action-buttons">
+          <button class="action-btn btn-reviewed ${f.status === "reviewed" ? "btn-active" : ""}" onclick="updateFeedbackStatus(${f.id}, 'reviewed')">Mark Reviewed</button>
+          <button class="action-btn btn-actioned ${f.status === "actioned" ? "btn-active" : ""}" onclick="updateFeedbackStatus(${f.id}, 'actioned')">Mark Actioned</button>
+          ${f.status !== "new" ? `<button class="action-btn btn-reset" onclick="updateFeedbackStatus(${f.id}, 'new')">Reset</button>` : ""}
+          <button class="action-btn btn-save-note" onclick="saveFeedbackNote(${f.id})">Save Note</button>
+        </div>
+      </div>
     </div>
   `).join("");
+}
+
+async function updateFeedbackStatus(id, status) {
+  const res = await fetch(`${API}/feedback/${id}`, {
+    method: "PATCH",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (res.ok) loadStaffFeedback();
+}
+
+async function saveFeedbackNote(id) {
+  const note = document.getElementById(`note-${id}`).value;
+  const res = await fetch(`${API}/feedback/${id}`, {
+    method: "PATCH",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ internal_note: note }),
+  });
+  if (res.ok) {
+    const card = document.getElementById(`fcard-${id}`);
+    const indicator = document.createElement("span");
+    indicator.textContent = " Saved!";
+    indicator.style.cssText = "color:#27ae60;font-size:0.85rem;";
+    const btn = card.querySelector(".btn-save-note");
+    btn.after(indicator);
+    setTimeout(() => indicator.remove(), 2000);
+  }
 }
 
 function escapeHtml(str) {

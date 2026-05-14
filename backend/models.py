@@ -96,6 +96,9 @@ class Feedback(db.Model):
     rating = db.Column(db.Integer, nullable=False)  # 1-5
     category = db.Column(db.String(50))  # general | selection | service | website | other
     message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="new")  # new | reviewed | actioned
+    internal_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User", backref="feedback", lazy=True)
