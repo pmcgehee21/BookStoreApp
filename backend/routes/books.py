@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from models import db, Book, Author
 
 books_bp = Blueprint("books", __name__)
@@ -72,8 +72,8 @@ def update_book(book_id):
 
 
 def _require_employee():
-    identity = get_jwt_identity()
-    if identity["role"] not in ("employee", "manager"):
+    claims = get_jwt()
+    if claims.get("role", "customer") not in ("employee", "manager"):
         from flask import abort
         abort(403)
 

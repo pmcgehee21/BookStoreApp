@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from models import db, Cart, CartItem, Order, OrderItem, Payment, Book
 
 orders_bp = Blueprint("orders", __name__)
@@ -8,7 +8,7 @@ orders_bp = Blueprint("orders", __name__)
 @orders_bp.route("/cart", methods=["GET"])
 @jwt_required()
 def get_cart():
-    user_id = get_jwt_identity()["id"]
+    user_id = int(get_jwt_identity())
     cart = _get_or_create_cart(user_id)
     return jsonify(_serialize_cart(cart)), 200
 
@@ -16,7 +16,7 @@ def get_cart():
 @orders_bp.route("/cart", methods=["POST"])
 @jwt_required()
 def add_to_cart():
-    user_id = get_jwt_identity()["id"]
+    user_id = int(get_jwt_identity())
     data = request.get_json()
     book = Book.query.get_or_404(data["book_id"])
 
@@ -37,7 +37,7 @@ def add_to_cart():
 @orders_bp.route("/cart/<int:item_id>", methods=["DELETE"])
 @jwt_required()
 def remove_from_cart(item_id):
-    user_id = get_jwt_identity()["id"]
+    user_id = int(get_jwt_identity())
     cart = _get_or_create_cart(user_id)
     item = CartItem.query.filter_by(id=item_id, cart_id=cart.id).first_or_404()
     db.session.delete(item)
@@ -48,7 +48,7 @@ def remove_from_cart(item_id):
 @orders_bp.route("/checkout", methods=["POST"])
 @jwt_required()
 def checkout():
-    user_id = get_jwt_identity()["id"]
+    user_id = int(get_jwt_identity())
     cart = _get_or_create_cart(user_id)
 
     if not cart.items:
@@ -86,11 +86,13 @@ def checkout():
 @orders_bp.route("/orders", methods=["GET"])
 @jwt_required()
 def get_orders():
-    identity = get_jwt_identity()
-    if identity["role"] in ("employee", "manager"):
+    claims = get_jwt()
+    role = claims.get("role", "customer")
+    user_id = int(get_jwt_identity())
+    if role in ("employee", "manager"):
         orders = Order.query.all()
     else:
-        orders = Order.query.filter_by(user_id=identity["id"]).all()
+        orders = Order.query.filter_by(user_id=user_id).all()
     return jsonify([_serialize_order(o) for o in orders]), 200
 
 
