@@ -610,3 +610,4 @@ button[onclick="checkout()"] {
 }
 .badge-success { background: #eafaf1; color: #27ae60; }
 .badge-fail    { background: #fdedec; color: #e74c3c; }
+.badge-action  { background: #eaf0fb; color: #2471a3; }

@@ -99,6 +99,17 @@ class LoginActivity(db.Model):
     user = db.relationship("User", backref="login_activity", lazy=True)
 
 
+class ActivityLog(db.Model):
+    __tablename__ = "activity_log"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    action = db.Column(db.String(100), nullable=False)
+    details = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User", backref="activity_logs", lazy=True)
+
+
 class Feedback(db.Model):
     __tablename__ = "feedback"
     id = db.Column(db.Integer, primary_key=True)

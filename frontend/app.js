@@ -13,6 +13,7 @@ function showSection(id) {
   if (id === "staff-feedback") loadStaffFeedback();
   if (id === "reviews") loadPublicReviews();
   if (id === "login-activity") loadLoginActivity();
+  if (id === "activity-log") loadActivityLog();
 }
 
 function applyRoleUI() {
@@ -24,6 +25,7 @@ function applyRoleUI() {
   document.getElementById("nav-orders").classList.toggle("hidden", !isEmployee);
   document.getElementById("nav-staff-feedback").classList.toggle("hidden", !isEmployee);
   document.getElementById("nav-login-activity").classList.toggle("hidden", userRole !== "manager");
+  document.getElementById("nav-activity-log").classList.toggle("hidden", userRole !== "manager");
 }
 
 function logout() {
@@ -560,6 +562,51 @@ async function loadPublicReviews() {
       ` : ""}
     </div>
   `).join("");
+}
+
+// --- Manager: Activity Log ---
+
+async function loadActivityLog() {
+  if (!token || userRole !== "manager") return;
+  const res = await fetch(`${API}/auth/activity-log`, { headers: authHeaders() });
+  if (!res.ok) return;
+  const rows = await res.json();
+  const listEl = document.getElementById("activity-log-list");
+
+  if (!rows.length) {
+    listEl.innerHTML = `<p style="color:#888;">No activity recorded yet.</p>`;
+    return;
+  }
+
+  const actionLabels = {
+    book_added: "Book Added",
+    stock_updated: "Stock Updated",
+    order_placed: "Order Placed",
+    feedback_status_changed: "Feedback Updated",
+  };
+
+  listEl.innerHTML = `
+    <table class="activity-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>${escapeHtml(r.timestamp)}</td>
+            <td>${escapeHtml(r.user_name)}</td>
+            <td><span class="activity-badge badge-action">${actionLabels[r.action] || r.action}</span></td>
+            <td>${escapeHtml(r.details || "")}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
 }
 
 function escapeHtml(str) {

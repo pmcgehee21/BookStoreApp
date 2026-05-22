@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from models import db, Cart, CartItem, Order, OrderItem, Payment, Book
+from models import db, Cart, CartItem, Order, OrderItem, Payment, Book, ActivityLog
 
 orders_bp = Blueprint("orders", __name__)
 
@@ -79,6 +79,11 @@ def checkout():
     order.status = "paid"
 
     db.session.delete(cart)
+    db.session.add(ActivityLog(
+        user_id=user_id,
+        action="order_placed",
+        details=f"Order #{order.id} placed — {len(order.items)} item(s), total ${total:.2f}",
+    ))
     db.session.commit()
     return jsonify({"order_id": order.id, "total": total, "status": order.status}), 201
 

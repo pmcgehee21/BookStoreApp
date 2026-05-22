@@ -21,6 +21,7 @@
       <button onclick="showSection('orders')" id="nav-orders" class="hidden">Orders</button>
       <button onclick="showSection('staff-feedback')" id="nav-staff-feedback" class="hidden">Manage Feedback</button>
       <button onclick="showSection('login-activity')" id="nav-login-activity" class="hidden">Login Activity</button>
+      <button onclick="showSection('activity-log')" id="nav-activity-log" class="hidden">Activity Log</button>
       <button onclick="logout()" id="nav-logout" class="hidden">Logout</button>
     </div>
   </nav>
@@ -146,6 +147,13 @@
         <button class="feedback-submit-btn" onclick="submitFeedback()">Submit Feedback</button>
         <p id="feedback-message-status" style="margin-top:0.8rem;"></p>
       </div>
+    </section>
+
+    <!-- Manager: Activity Log -->
+    <section id="activity-log" class="section hidden">
+      <h2>Activity Log</h2>
+      <p style="color:#555;margin-bottom:1rem;">Recent system actions — book changes, orders, and feedback updates.</p>
+      <div id="activity-log-list"></div>
     </section>
 
     <!-- Manager: Login Activity -->

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, verify_jwt_in_request
-from models import db, Feedback, User
+from models import db, Feedback, User, ActivityLog
 from datetime import datetime, timezone
 
 feedback_bp = Blueprint("feedback", __name__)
@@ -126,6 +126,12 @@ def update_feedback(feedback_id):
     if "status" in data:
         if data["status"] not in VALID_STATUSES:
             return jsonify({"error": "Invalid status."}), 400
+        if data["status"] != f.status:
+            db.session.add(ActivityLog(
+                user_id=int(get_jwt_identity()),
+                action="feedback_status_changed",
+                details=f"Feedback #{f.id} from '{f.name}' marked as {data['status']}",
+            ))
         f.status = data["status"]
 
     if "internal_note" in data:

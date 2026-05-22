@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from models import db, Book, Author
+from models import db, Book, Author, ActivityLog
 
 books_bp = Blueprint("books", __name__)
 
@@ -54,6 +54,12 @@ def create_book():
         description=data.get("description"),
     )
     db.session.add(book)
+    db.session.flush()
+    db.session.add(ActivityLog(
+        user_id=int(get_jwt_identity()),
+        action="book_added",
+        details=f"Added '{book.title}' by {author.name} (stock: {book.stock_quantity})",
+    ))
     db.session.commit()
     return jsonify(_serialize(book)), 201
 
@@ -64,9 +70,16 @@ def update_book(book_id):
     _require_employee()
     book = Book.query.get_or_404(book_id)
     data = request.get_json()
+    old_stock = book.stock_quantity
     for field in ("title", "price", "stock_quantity", "category", "description", "isbn"):
         if field in data:
             setattr(book, field, data[field])
+    if "stock_quantity" in data and data["stock_quantity"] != old_stock:
+        db.session.add(ActivityLog(
+            user_id=int(get_jwt_identity()),
+            action="stock_updated",
+            details=f"'{book.title}' stock changed from {old_stock} to {book.stock_quantity}",
+        ))
     db.session.commit()
     return jsonify(_serialize(book)), 200
 

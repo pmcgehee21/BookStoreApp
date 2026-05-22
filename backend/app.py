@@ -33,15 +33,17 @@ with app.app_context():
     db.create_all()
     from sqlalchemy import text, inspect
     inspector = inspect(db.engine)
-    existing_cols = [c["name"] for c in inspector.get_columns("feedback")] if "feedback" in inspector.get_table_names() else []
+    tables = inspector.get_table_names()
+
+    existing_feedback_cols = [c["name"] for c in inspector.get_columns("feedback")] if "feedback" in tables else []
     with db.engine.connect() as conn:
-        if "status" not in existing_cols:
+        if "status" not in existing_feedback_cols:
             conn.execute(text("ALTER TABLE feedback ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'new'"))
             conn.commit()
-        if "internal_note" not in existing_cols:
+        if "internal_note" not in existing_feedback_cols:
             conn.execute(text("ALTER TABLE feedback ADD COLUMN internal_note TEXT"))
             conn.commit()
-        if "updated_at" not in existing_cols:
+        if "updated_at" not in existing_feedback_cols:
             conn.execute(text("ALTER TABLE feedback ADD COLUMN updated_at DATETIME"))
             conn.commit()
 

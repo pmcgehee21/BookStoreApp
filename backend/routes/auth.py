@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, LoginActivity
+from models import db, User, LoginActivity, ActivityLog
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -75,5 +75,27 @@ def login_activity():
         "user_name": r.user.name if r.user else None,
         "success": r.success,
         "user_agent": r.user_agent,
+        "timestamp": r.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC"),
+    } for r in rows]), 200
+
+
+@auth_bp.route("/activity-log", methods=["GET"])
+@jwt_required()
+def activity_log():
+    claims = get_jwt()
+    if claims.get("role") != "manager":
+        return jsonify({"error": "Managers only"}), 403
+
+    limit = min(int(request.args.get("limit", 200)), 500)
+    rows = (ActivityLog.query
+            .order_by(ActivityLog.timestamp.desc())
+            .limit(limit)
+            .all())
+
+    return jsonify([{
+        "id": r.id,
+        "user_name": r.user.name if r.user else "System",
+        "action": r.action,
+        "details": r.details,
         "timestamp": r.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC"),
     } for r in rows]), 200
