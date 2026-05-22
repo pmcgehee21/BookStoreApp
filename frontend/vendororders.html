@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ink and Leather Vendor Orders</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+
+        <h1>Ink and Leather Bookstore</h1>
+        <h2>Vendor Order Management</h2>
+
+        <!-- Vendor Order Form -->
+
+        <div class="form-section">
+
+            <h3>Create Vendor Order</h3>
+
+            <form id="vendorOrderForm">
+
+                <input
+                    type="text"
+                    id="vendorName"
+                    placeholder="Vendor Name"
+                    required
+                >
+
+                <input
+                    type="text"
+                    id="bookTitle"
+                    placeholder="Book Title"
+                    required
+                >
+
+                <input
+                    type="number"
+                    id="quantity"
+                    placeholder="Quantity"
+                    required
+                >
+
+                <button type="submit">
+                    Add Vendor Order
+                </button>
+
+            </form>
+
+        </div>
+
+        <!-- Vendor Orders Table -->
+
+        <div class="table-section">
+
+            <h3>Vendor Orders</h3>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Vendor</th>
+                        <th>Book Title</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                        <th>Update Status</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+
+                <tbody id="ordersTableBody">
+                    <!-- Orders added dynamically -->
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
