@@ -578,9 +578,10 @@ async function loadVendorOrders(statusFilter) {
   if (statusFilter !== undefined) currentVoFilter = statusFilter;
 
   // Update tab styles
-  ["all", "Pending", "Partially Received", "Received", "Cancelled"].forEach(s => {
-    const tab = document.getElementById(`vo-tab-${s}`);
-    if (tab) tab.classList.toggle("active", currentVoFilter === s);
+  const voTabIds = { "all": "vo-tab-all", "Pending": "vo-tab-Pending", "Partially Received": "vo-tab-partial", "Received": "vo-tab-Received", "Cancelled": "vo-tab-Cancelled" };
+  Object.entries(voTabIds).forEach(([status, id]) => {
+    const tab = document.getElementById(id);
+    if (tab) tab.classList.toggle("active", currentVoFilter === status);
   });
 
   // Populate book dropdown if empty
@@ -884,6 +885,9 @@ async function loadActivityLog() {
     stock_updated: "Stock Updated",
     order_placed: "Order Placed",
     feedback_status_changed: "Feedback Updated",
+    vendor_order_created: "Vendor Order Created",
+    vendor_order_received: "Vendor Stock Received",
+    vendor_order_cancelled: "Vendor Order Cancelled",
   };
 
   listEl.innerHTML = `
