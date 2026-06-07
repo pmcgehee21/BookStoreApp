@@ -14,7 +14,7 @@ FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "f
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///bookstore.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = "change-this-secret-before-production"
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "fallback-dev-secret-change-me")
 
 db.init_app(app)
 JWTManager(app)
