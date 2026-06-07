@@ -24,7 +24,6 @@ BRANCH = "main"
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 TRACKED_FILES = [
-    ".replit",
     "main.py",
     "pyproject.toml",
     "sync_to_github.py",
