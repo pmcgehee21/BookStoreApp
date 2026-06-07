@@ -57,4 +57,3 @@ run = ["python3", "backend/app.py"]
 [userenv]
 
 [userenv.shared]
-JWT_SECRET_KEY = "42f4ea3f-1248-4cd0-a068-7081024c424e8e28b961-b853-4f2d-8652-fd2fac3794c2"
